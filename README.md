@@ -1,65 +1,88 @@
-# markdown-cv
+# firmware-tooling
 
-A curriculum vitae maintained in plain text and rendered to HTML and PDF using CSS.
+Auxiliary tools for BACON firmware development.
 
-For more details, see the [project page](http://elipapa.github.io/markdown-cv), or the blog post on [why I switched to markdown for my CV](http://elipapa.github.io/blog/why-i-switched-to-markdown-for-my-cv.html).
+## GAS
 
-***
+The Gateway Appliance Simulator (or just GAS for short) allows for the Simulation of either an Appliance or a Gateway within the Context of Device Communication. This allows Users to test the way their Appliances or Gateways receive data or respond to requests. 
 
-## Customization
+The GAS is based on three central concepts:
 
-Simply [fork the markdown-cv repo](https://github.com/elipapa/markdown-cv)
+Resource (IResource): The smallest unit of data. It represents a single, addressable data point, such as a sensor value, a configuration setting, or a status.
 
-![](https://help.github.com/assets/images/help/repository/fork_button.jpg)
+Parameter Database (ParameterDatabase): Manages a collection of resources. It is responsible for serializing (Pull) and deserializing (Push) data blocks and implements the logic for handling transmissions that are larger than the maximum payload.
 
-and edit the `index.md` file [directly in Github](https://help.github.com/articles/editing-files-in-your-repository/)
+Resource Group (ResourceGroup): A logical container that bundles a database and serves as the primary interface for the application. It controls access to resources, checks permissions, and manages pending operations.
 
-![](https://help.github.com/assets/images/help/repository/edit-file-edit-button.png)
+### IResource Interface
 
-adding your skills, jobs and education.
+The IResource interface is the fundamental abstraction for all data points in the system. Every resource, regardless of its data type, must implement this interface.
 
-![](https://help.github.com/assets/images/help/repository/edit-readme-light.png)
+Implementations:
 
-## Distribution
+- Uint8Resource: For a single 8-bit value.
 
-To transform your plain text CV into a beautiful and shareable HTML page, you have two options:
+- Uint16Resource: For a 16-bit integer value (little-endian).
 
-### I. Use Github Pages to publish it online
+- StringResource: For an ASCII string with a defined maximum length.
 
-1. Delete the existing `gh-pages` branch from your fork. It will only contain this webpage. You can either use git or [the Github web interface](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/#deleting-a-branch).
-2. Create a new branch called `gh-pages`.
-3. Head to *yourusername*.github.io/markdown-cv to see your CV live.
+### ParameterDatabase Interface
 
-Any change you want to make to your CV from then on would have to be done on the `gh-pages` branch and will be immediately rendered by Github Pages.
+This interface abstracts the management, storage, and serialization of a collection of IResource instances.
 
-### II. Build it locally and print a PDF
+Implementations:
 
-1. To [install jekyll](https://jekyllrb.com/docs/installation/), run `gem install bundler jekyll` from the command line.
-3. [Clone](https://help.github.com/en/articles/cloning-a-repository) your fork of markdown-cv to your local machine.
-3. Type `jekyll serve` to render your CV at http://localhost:4000.
-4. You can edit the `index.md` file and see the changes live in your browser.
-5. To print a PDF, press <kbd>⌘</kbd> + <kbd>p</kbd>. Print and web CSS media queries should take care of the styling.
+StaticDatabase: A simple implementation for a fixed number of resources that are always read or written as a whole.
 
-## Styling
+DynamicDatabaseV1 / DynamicDatabaseV2: Advanced implementations that can transfer large amounts of data through pagination (splitting into multiple packets). They are suitable for use cases where the total size of the resources exceeds the maximum packet size (MaxPayloadLength).
 
-The included CSS will render your CV in two styles:
-s
-1. `kjhealy` the original default, inspired by [kjhealy's vita
-template](https://github.com/kjhealy/kjh-vita).
-2. `davewhipp` is a tweaked version of `kjhealy`, with bigger fonts and dates
-  right aligned.
+### ResourceGroup Struct
 
-To change the default style, simply change the variable in the
-`_config.yml` file.
+The ResourceGroup is the primary control unit for the application. It encapsulates a ParameterDatabase and the logic for managing communication cycles.
 
-Any other styling is possible. More CSS style contributions and forks are welcome!
+### Important Data Structures
 
-### Author
+- OutgoingMessage: Represents an outgoing message with an action (e.g., OpReturn), parameters, and status.
 
-Eliseo Papa ([Twitter](http://twitter.com/elipapa)/[Github](http://github.com/elipapa)/[Website](https://elipapa.github.io)).
+- BLWPError: Defines a protocol-specific error that contains a standardized status code.
 
-![Eliseo Papa](https://s.gravatar.com/avatar/eae1f0c01afda2bed9ce9cb88f6873f6?s=100)
+- PendingType: Describes the state of a ResourceGroup, e.g., whether it is waiting for a read or write response.
 
-### License
+### Requirements
 
-[MIT License](https://github.com/elipapa/markdown-cv/blob/master/LICENSE)
+If you just want to run the Simulator on your device you can grab one of the executables from the releases. (https://github.com/bosch-bacon/firmware-tooling/releases)
+
+If you want to develop GAS you will need Golang Version 1.25.0 or newer, Node Version 24 or newer and Wails.
+
+Go can be installed using their website (https://go.dev/dl) or using the package manager of your choice.
+Node can be installed using nvm or fnm, instructions on the installation can be found here: https://nodejs.org/en/download 
+Wails is used to generate the frontend for the Simulator, instructions on how to install Wails can be found here: https://wails.io/
+
+### Running it
+
+`wails dev` is used for spinning up a development server for wails, just navigate into the root directory of the project and run the command.
+If you have all dependancies installed it should open the GUI.
+
+<!-- ### <TODO> Datamodel -->
+
+<!-- ### <TODO> Errortypes/Errorhandling -->
+
+## Running in Devcontainer
+
+In order for `wails dev` to work inside the devcontainer, you need to allow connections to the `xserver`
+of the host machine.
+
+Run
+
+```
+xhost +SI:localuser:$(id -un)
+```
+
+to allow access of your user to it. If the container is executed as `root`, run
+
+```
+xhost +SI:localuser:root
+```
+
+instead.
+
